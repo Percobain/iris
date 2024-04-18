@@ -1,48 +1,41 @@
-#import all the required modules
-import numpy as np
 import cv2
+import serial,time
+face_cascade= cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
+cap=cv2.VideoCapture(1)
+#fourcc= cv2.VideoWriter_fourcc(*'XVID')
+ArduinoSerial=serial.Serial('COM4',9600,timeout=0.1)
+#out= cv2.VideoWriter('face detection4.avi',fourcc,20.0,(640,480))
+time.sleep(1)
 
-#importing the Haar Cascade for face detection
-face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
-
-#To capture the video stream from webcam.
-# To capture the video stream from webcam.
-cap = cv2.VideoCapture(0)
-
-# Read the captured image, convert it to Gray image and find faces
-while True:
-    ret, img = cap.read()
-    img = cv2.flip(img, 1)  # Flip horizontally
-    cv2.imshow('img', img)  # Display the flipped image
-    cv2.resizeWindow('img', 500, 400)  # Resize the window
-    cv2.line(img, (500, 200), (0, 200), (0, 255, 0), 1)
-    cv2.line(img, (250, 0), (250, 500), (0, 255, 0), 1)
-    cv2.circle(img, (250, 200), 5, (255, 255, 255), -1)
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    faces = face_cascade.detectMultiScale(gray, 1.3)
-    cv2.rectangle(img, (230, 180), (270, 220), (0, 255, 0), 5)
-
-    # Detect the face and make a rectangle around it
-    for (x, y, w, h) in faces:
-        cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 5)
-        roi_gray = gray[y:y + h, x:x + w]
-        roi_color = img[y:y + h, x:x + w]
-        # Center of roi (Rectangle)
-        xx = int(x + (x + h)) / 2
-        yy = int(y + (y + w)) / 2
-        print('X:')
-        print(xx)
-        print('Y:')
-        print(yy)
-        center = (xx, yy)
-
-    # Display the stream.
-    cv2.imshow('img', img)
-
-    # Hit 'Esc' to terminate execution
-    k = cv2.waitKey(30) & 0xff
-    if k == 27:
+while cap.isOpened():
+    ret, frame= cap.read()
+    frame=cv2.flip(frame,1)  #mirror the image
+    print(frame.shape)
+    gray = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
+    faces= face_cascade.detectMultiScale(gray,1.1,6)  #detect the face
+    for x,y,w,h in faces:
+        #sending coordinates to Arduino
+        string='X:{0:d} , Y:{1:d}'.format((x+w//2),(y+h//2))
+        print(string)
+        ArduinoSerial.write(string.encode('utf-8'))
+        #plot the center of the face
+        cv2.circle(frame,(x+w//2,y+h//2),2,(0,255,0),2)
+        #plot the roi
+        cv2.rectangle(frame,(x,y),(x+w,y+h),(0,0,255),3)
+    #plot the squared region in the center of the screen
+    cv2.rectangle(frame,(640//2-30,480//2-30),
+                 (640//2+30,480//2+30),
+                  (255,255,255),3)
+    #out.write(frame)
+    cv2.imshow('img',frame)
+    #cv2.imwrite('output_img.jpg',frame)
+    '''for testing purpose
+    read= str(ArduinoSerial.readline(ArduinoSerial.inWaiting()))
+    time.sleep(0.05)
+    print('data from arduino:'+read)
+    '''
+    # press q to Quit
+    if cv2.waitKey(10)&0xFF== ord('q'):
         break
-
 cap.release()
 cv2.destroyAllWindows()

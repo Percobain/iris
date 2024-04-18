@@ -1,82 +1,61 @@
-#include <Servo.h>
-#include <LiquidCrystal.h>
-Servo servoVer; //Vertical Servo
-Servo servoHor; //Horizontal Servo
-int servoYValue = 0;
-int x;
-int y;
-int prevX;
-int prevY;
-LiquidCrystal lcd(7, 8, 9, 10, 11, 12);
+#include<Servo.h>
 
-void setup()
-{
-  lcd.begin(16, 2);
-  Serial.begin(115200);
-  Serial.setTimeout(1);
-  servoVer.attach(5); //Attach Vertical Servo to Pin 5
-  servoHor.attach(6); //Attach Horizontal Servo to Pin 6
-  servoVer.write(servoYValue);
-  servoHor.write(90); //This is currently confgiured for a continuous rotation servo.
+Servo x, y;
+int width = 640, height = 480;  // total resolution of the video
+int xpos = 90, ypos = 90;  // initial positions of both Servos
+void setup() {
+
+  Serial.begin(9600);
+  x.attach(9);
+  y.attach(10);
+  // Serial.print(width);
+  //Serial.print("\t");
+  //Serial.println(height);
+  x.write(xpos);
+  y.write(ypos);
 }
-void Pos()
-{
+const int angle = 2;   // degree of increment or decrement
 
-  if (x < 190) {
-    //move right
-    servoHor.write(100);
-    delay(300); // This delay is how long the servo will move before stopping. The delay is higher because the coords of the face are further away and should move further.
-    servoHor.write(90);
-  }
-  if (x < 230 && x > 190) {
-    servoHor.write(100);
-    delay(100);
-    servoHor.write(90);
-  } if (x > 270 && x < 290 ) { //move left
-    servoHor.write(85);
-    delay(100);
-    servoHor.write(90);
-
-  } if (x > 290) {
-    //far away, faster wider movements.
-    servoHor.write(85);
-    delay(300);
-    servoHor.write(90);
-
-  }
-  if (y < 180) { //move up
-    if (servoYValue < 180) {
-      servoYValue++;
-      servoVer.write(servoYValue);
-    }
-
-  } if (y > 220) { //move down
-    if (servoYValue > 0) {
-      servoYValue--;
-      servoVer.write(servoYValue);
-    }
-  }
-}
-
-
-
-
-void loop()
-{
+void loop() {
   if (Serial.available() > 0)
   {
+    int x_mid, y_mid;
     if (Serial.read() == 'X')
     {
-      x = Serial.parseInt();
+      x_mid = Serial.parseInt();  // read center x-coordinate
       if (Serial.read() == 'Y')
-      {
-        y = Serial.parseInt();
-        Pos();
-      }
+        y_mid = Serial.parseInt(); // read center y-coordinate
     }
-    while (Serial.available() > 0)
-    {
-      Serial.read();
-    }
+    /* adjust the servo within the squared region if the coordinates
+        is outside it
+    */
+    if (x_mid > width / 2 + 30)
+      xpos += angle;
+    if (x_mid < width / 2 - 30)
+      xpos -= angle;
+    if (y_mid < height / 2 + 30)
+      ypos -= angle;
+    if (y_mid > height / 2 - 30)
+      ypos += angle;
+
+
+    // if the servo degree is outside its range
+    if (xpos >= 180)
+      xpos = 180;
+    else if (xpos <= 0)
+      xpos = 0;
+    if (ypos >= 180)
+      ypos = 180;
+    else if (ypos <= 0)
+      ypos = 0;
+
+    x.write(xpos);
+    y.write(ypos);
+
+    // used for testing
+    Serial.print("\t");
+    Serial.print(x_mid);
+    Serial.print("\t");
+    Serial.println(y_mid);
   }
 }
